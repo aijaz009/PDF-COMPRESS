@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PDF Compressor</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <h1>PDF Compressor</h1>
+        <form id="uploadForm">
+            <input type="file" id="pdfFile" accept=".pdf" required>
+            <label for="compressionLevel">Select Compression Level:</label>
+            <input type="range" id="compressionLevel" name="compressionLevel" min="1" max="5" value="3">
+            <span id="compressionValue">3</span>
+            <div id="estimatedSize" class="estimated-size">Estimated Size: N/A</div>
+            <button type="submit">Compress PDF</button>
+        </form>
+    </div>
+    <script src="script.js"></script>
+</body>
+</html>
