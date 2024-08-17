@@ -16,29 +16,43 @@ app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
+// Function to compress images
+async function compressImage(imageBuffer) {
+    return await sharp(imageBuffer)
+        .resize({ width: 800 }) // Resize to a width of 800px, adjust as needed
+        .jpeg({ quality: 70 }) // Compress to JPEG with 70% quality
+        .toBuffer();
+}
+
+// Function to process PDF
 app.post('/compress', upload.single('pdf'), async (req, res) => {
     const pdfPath = req.file.path;
 
     try {
         const pdfBytes = fs.readFileSync(pdfPath);
         const pdfDoc = await PDFDocument.load(pdfBytes);
-
-        // Create a new PDF document for the compressed output
         const compressedPdfDoc = await PDFDocument.create();
 
         // Loop through each page
         for (let i = 0; i < pdfDoc.getPageCount(); i++) {
-            const [copiedPage] = await compressedPdfDoc.copyPages(pdfDoc, [i]);
-            compressedPdfDoc.addPage(copiedPage);
+            const page = pdfDoc.getPage(i);
+            const { width, height } = page.getSize();
+
+            // Create a new page in the compressed PDF
+            const newPage = compressedPdfDoc.addPage([width, height]);
+
+            // Extract images from the page
+            const images = page.node.getImages(); // This is a conceptual function
+            for (const image of images) {
+                const imageBuffer = await image.getImageData(); // This is a conceptual function
+                const compressedImageBuffer = await compressImage(imageBuffer);
+                newPage.drawImage(compressedImageBuffer, { x: 0, y: 0, width, height });
+            }
         }
 
-        // Save the compressed PDF
         const compressedPdfBytes = await compressedPdfDoc.save();
-
-        // Clean up the uploaded file
         fs.unlinkSync(pdfPath); // Clean up the uploaded file
 
-        // Send the compressed PDF back to the client
         res.setHeader('Content-Disposition', 'attachment; filename=compressed.pdf');
         res.setHeader('Content-Type', 'application/pdf');
         res.send(compressedPdfBytes);
