@@ -1,7 +1,7 @@
 // server.js
 const express = require('express');
 const multer = require('multer');
-const { PDFDocument } = require('pdf-lib');
+const { PDFDocument, rgb, degrees } = require('pdf-lib');
 const fs = require('fs');
 const path = require('path');
 
@@ -32,8 +32,37 @@ app.post('/compress', upload.single('pdf'), async (req, res) => {
             compressedPdfDoc.addPage(page);
         });
 
+        // Optimize the PDF based on the compression level
+        switch (compressionLevel) {
+            case 1:
+                // Minimal compression
+                break;
+            case 2:
+                // Moderate compression
+                await compressedPdfDoc.optimize();
+                break;
+            case 3:
+                // Standard compression
+                await compressedPdfDoc.optimize();
+                await compressedPdfDoc.flattenPages();
+                break;
+            case 4:
+                // High compression
+                await compressedPdfDoc.optimize();
+                await compressedPdfDoc.flattenPages();
+                await compressedPdfDoc.embedStandardFonts();
+                break;
+            case 5:
+                // Maximum compression
+                await compressedPdfDoc.optimize();
+                await compressedPdfDoc.flattenPages();
+                await compressedPdfDoc.embedStandardFonts();
+                await compressedPdfDoc.subset();
+                break;
+        }
+
         // Save the compressed PDF
-        const compressedPdfBytes = await compressedPdfDoc.save({ useObjectStreams: compressionLevel > 1 });
+        const compressedPdfBytes = await compressedPdfDoc.save();
 
         res.setHeader('Content-Disposition', 'attachment; filename=compressed.pdf');
         res.setHeader('Content-Type', 'application/pdf');
