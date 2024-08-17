@@ -1,9 +1,10 @@
 // server.js
 const express = require('express');
 const multer = require('multer');
-const { PDFDocument, rgb, degrees } = require('pdf-lib');
+const { PDFDocument } = require('pdf-lib');
 const fs = require('fs');
 const path = require('path');
+const sharp = require('sharp');
 
 const app = express();
 const upload = multer({ dest: 'uploads/' });
@@ -16,7 +17,6 @@ app.get('/', (req, res) => {
 });
 
 app.post('/compress', upload.single('pdf'), async (req, res) => {
-    const compressionLevel = parseInt(req.body.compressionLevel);
     const pdfPath = req.file.path;
 
     try {
@@ -26,52 +26,25 @@ app.post('/compress', upload.single('pdf'), async (req, res) => {
         // Create a new PDF document for the compressed output
         const compressedPdfDoc = await PDFDocument.create();
 
-        // Copy pages from the original document to the new document
-        const copiedPages = await compressedPdfDoc.copyPages(pdfDoc, pdfDoc.getPageIndices());
-        copiedPages.forEach((page) => {
-            compressedPdfDoc.addPage(page);
-        });
-
-        // Optimize the PDF based on the compression level
-        switch (compressionLevel) {
-            case 1:
-                // Minimal compression
-                break;
-            case 2:
-                // Moderate compression
-                await compressedPdfDoc.optimize();
-                break;
-            case 3:
-                // Standard compression
-                await compressedPdfDoc.optimize();
-                await compressedPdfDoc.flattenPages();
-                break;
-            case 4:
-                // High compression
-                await compressedPdfDoc.optimize();
-                await compressedPdfDoc.flattenPages();
-                await compressedPdfDoc.embedStandardFonts();
-                break;
-            case 5:
-                // Maximum compression
-                await compressedPdfDoc.optimize();
-                await compressedPdfDoc.flattenPages();
-                await compressedPdfDoc.embedStandardFonts();
-                await compressedPdfDoc.subset();
-                break;
+        // Loop through each page
+        for (let i = 0; i < pdfDoc.getPageCount(); i++) {
+            const [copiedPage] = await compressedPdfDoc.copyPages(pdfDoc, [i]);
+            compressedPdfDoc.addPage(copiedPage);
         }
 
         // Save the compressed PDF
         const compressedPdfBytes = await compressedPdfDoc.save();
 
+        // Clean up the uploaded file
+        fs.unlinkSync(pdfPath); // Clean up the uploaded file
+
+        // Send the compressed PDF back to the client
         res.setHeader('Content-Disposition', 'attachment; filename=compressed.pdf');
         res.setHeader('Content-Type', 'application/pdf');
         res.send(compressedPdfBytes);
     } catch (error) {
-        console.error(error);
+        console.error('Error compressing PDF:', error);
         res.status(500).send('Error compressing the PDF');
-    } finally {
-        fs.unlinkSync(pdfPath); // Clean up the uploaded file
     }
 });
 
