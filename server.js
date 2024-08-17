@@ -1,3 +1,4 @@
+// server.js
 const express = require('express');
 const multer = require('multer');
 const { PDFDocument } = require('pdf-lib');
@@ -8,6 +9,11 @@ const app = express();
 const upload = multer({ dest: 'uploads/' });
 
 app.use(express.static('public'));
+
+// Serve the index.html file at the root path
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
 
 app.post('/compress', upload.single('pdf'), async (req, res) => {
     const compressionLevel = parseInt(req.body.compressionLevel);
