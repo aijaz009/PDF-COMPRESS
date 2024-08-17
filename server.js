@@ -23,13 +23,23 @@ app.post('/compress', upload.single('pdf'), async (req, res) => {
         const pdfBytes = fs.readFileSync(pdfPath);
         const pdfDoc = await PDFDocument.load(pdfBytes);
 
-        // Compress the PDF based on the level
-        const compressedPdfBytes = await pdfDoc.save({ useObjectStreams: compressionLevel > 1 });
+        // Create a new PDF document for the compressed output
+        const compressedPdfDoc = await PDFDocument.create();
+
+        // Copy pages from the original document to the new document
+        const copiedPages = await compressedPdfDoc.copyPages(pdfDoc, pdfDoc.getPageIndices());
+        copiedPages.forEach((page) => {
+            compressedPdfDoc.addPage(page);
+        });
+
+        // Save the compressed PDF
+        const compressedPdfBytes = await compressedPdfDoc.save({ useObjectStreams: compressionLevel > 1 });
 
         res.setHeader('Content-Disposition', 'attachment; filename=compressed.pdf');
         res.setHeader('Content-Type', 'application/pdf');
         res.send(compressedPdfBytes);
     } catch (error) {
+        console.error(error);
         res.status(500).send('Error compressing the PDF');
     } finally {
         fs.unlinkSync(pdfPath); // Clean up the uploaded file
